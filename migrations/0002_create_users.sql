@@ -1,0 +1,14 @@
+CREATE TYPE role AS ENUM ('ADMIN', 'EMPLOYEE');
+CREATE TYPE status AS ENUM ('ACTIVE', 'DISABLED');
+
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  phone TEXT,
+  password_hash TEXT NOT NULL,
+  role role NOT NULL DEFAULT 'EMPLOYEE',
+  status status NOT NULL DEFAULT 'ACTIVE',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
