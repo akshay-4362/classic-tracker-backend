@@ -1,7 +1,7 @@
 services:
   - type: web
     name: construction-location-backend
-    env: docker
+    runtime: docker
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:

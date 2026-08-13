@@ -7,8 +7,21 @@ import { env } from './config/env.js';
 export function createApp() {
   const app = express();
 
+  // Render sits in front of this service as a single reverse proxy hop, so
+  // req.ip must be derived from the (trusted) X-Forwarded-For header rather
+  // than the socket address. This also silences express-rate-limit's
+  // ERR_ERL_UNEXPECTED_X_FORWARDED_FOR validation warning.
+  app.set('trust proxy', 1);
+
   app.use(helmet());
   app.use(cors({ origin: env.CORS_ORIGIN }));
+
+  // Health checks must never be subject to the request budget below, so
+  // register /health before the rate limiter (but still behind helmet/cors).
+  app.get('/health', (_req: Request, res: Response) => {
+    res.status(200).json({ status: 'ok' });
+  });
+
   app.use(
     rateLimit({
       windowMs: 15 * 60 * 1000,
@@ -18,10 +31,6 @@ export function createApp() {
     })
   );
   app.use(express.json());
-
-  app.get('/health', (_req: Request, res: Response) => {
-    res.status(200).json({ status: 'ok' });
-  });
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     console.error(err);

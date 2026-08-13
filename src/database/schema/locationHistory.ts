@@ -8,7 +8,7 @@ export const locationHistory = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     employeeId: uuid('employee_id')
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: 'cascade' }),
     latitude: doublePrecision('latitude').notNull(),
     longitude: doublePrecision('longitude').notNull(),
     location: geographyPoint('location').notNull(),

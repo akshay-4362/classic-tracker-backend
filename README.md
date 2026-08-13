@@ -70,9 +70,14 @@ database. On first deploy:
    in `render.yaml`.
 3. Render provides `DATABASE_URL` and `PORT` automatically; the app reads both
    from the environment and binds to `0.0.0.0`.
-4. Run `npm run db:migrate` against the Render database (e.g. via a Render
-   Shell session or a one-off job) after the first deploy, and after any
-   deploy that adds new migration files.
+4. Run `npm run db:migrate:prod` against the Render database (e.g. via a
+   Render Shell session or a one-off job) after the first deploy, and after
+   any deploy that adds new migration files (use `npm run
+   db:migrate:rollback:prod` to roll back the most recently applied
+   migration). These `:prod` scripts run the compiled JavaScript in `dist/`
+   rather than the `tsx`-based `db:migrate`/`db:migrate:rollback` scripts,
+   since the deployed image installs with `--omit=dev` (no `tsx`) and only
+   copies `dist/` and `migrations/`, not `src/`.
 
 ## Health check
 

@@ -7,7 +7,7 @@ export const employeeLocations = pgTable('employee_locations', {
   employeeId: uuid('employee_id')
     .notNull()
     .unique()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: 'cascade' }),
   latitude: doublePrecision('latitude').notNull(),
   longitude: doublePrecision('longitude').notNull(),
   location: geographyPoint('location').notNull(),
