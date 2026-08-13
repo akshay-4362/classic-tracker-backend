@@ -47,14 +47,24 @@ describe('login', () => {
   });
 
   it('rejects an unknown email', async () => {
+    const verifySpy = vi.spyOn(argon2, 'verify');
     vi.mocked(findUserByEmail).mockResolvedValue(null);
     await expect(login('nobody@example.com', 'whatever')).rejects.toThrow(AuthError);
+    // Regression guard: argon2.verify must still run against a dummy hash so
+    // an unknown email takes the same amount of time as a known one, closing
+    // the timing side-channel that would otherwise let an attacker
+    // distinguish "no such user" from "wrong password" by response time.
+    expect(verifySpy).toHaveBeenCalled();
   });
 
   it('rejects a disabled user even with the correct password', async () => {
+    const verifySpy = vi.spyOn(argon2, 'verify');
     const passwordHash = await argon2.hash('correct-password');
     vi.mocked(findUserByEmail).mockResolvedValue({ ...baseUser, status: 'DISABLED', passwordHash } as never);
     await expect(login('alex@example.com', 'correct-password')).rejects.toThrow(AuthError);
+    // Regression guard: same timing-safety requirement as above, but for the
+    // disabled-account path.
+    expect(verifySpy).toHaveBeenCalled();
   });
 
   it('rejects the wrong password', async () => {

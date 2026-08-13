@@ -21,17 +21,24 @@ function toUserView(user: UserRow): AuthUserView {
   return { id: user.id, name: user.name, email: user.email, role: user.role, status: user.status };
 }
 
+let dummyHashPromise: Promise<string> | null = null;
+function getDummyHash(): Promise<string> {
+  if (!dummyHashPromise) {
+    dummyHashPromise = argon2.hash('dummy-password-for-constant-time-login');
+  }
+  return dummyHashPromise;
+}
+
 export async function login(
   email: string,
   password: string
 ): Promise<{ user: AuthUserView; accessToken: string; refreshToken: string }> {
   const user = await findUserByEmail(email);
-  if (!user || user.status !== 'ACTIVE') {
-    throw new AuthError('Invalid email or password');
-  }
+  const canLogin = user !== null && user.status === 'ACTIVE';
+  const passwordHash = canLogin && user ? user.passwordHash : await getDummyHash();
+  const passwordValid = await argon2.verify(passwordHash, password);
 
-  const passwordValid = await argon2.verify(user.passwordHash, password);
-  if (!passwordValid) {
+  if (!canLogin || !user || !passwordValid) {
     throw new AuthError('Invalid email or password');
   }
 
