@@ -7,7 +7,19 @@ import { locationHistory } from './locationHistory.js';
 describe('database schema', () => {
   it('users table has the expected columns', () => {
     expect(Object.keys(getTableColumns(users)).sort()).toEqual(
-      ['createdAt', 'email', 'id', 'name', 'passwordHash', 'phone', 'role', 'status', 'updatedAt'].sort()
+      [
+        'createdAt',
+        'email',
+        'id',
+        'name',
+        'passwordHash',
+        'phone',
+        'refreshTokenExpiresAt',
+        'refreshTokenHash',
+        'role',
+        'status',
+        'updatedAt',
+      ].sort()
     );
   });
 
