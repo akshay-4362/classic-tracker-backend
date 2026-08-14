@@ -125,6 +125,20 @@ describe('refresh', () => {
   it('rejects a malformed refresh token', async () => {
     await expect(refresh('not-a-real-token')).rejects.toThrow(AuthError);
   });
+
+  it('rejects a disabled user even when the token hash matches and has not expired', async () => {
+    const token = signRefreshToken({ sub: 'user-1' });
+    const hash = crypto.createHash('sha256').update(token).digest('hex');
+    vi.mocked(findUserById).mockResolvedValue({
+      ...baseUser,
+      status: 'DISABLED',
+      passwordHash: 'irrelevant',
+      refreshTokenHash: hash,
+      refreshTokenExpiresAt: new Date(Date.now() + 1000 * 60 * 60),
+    } as never);
+
+    await expect(refresh(token)).rejects.toThrow(AuthError);
+  });
 });
 
 describe('logout', () => {
@@ -149,6 +163,11 @@ describe('getMe', () => {
 
   it('throws when the user no longer exists', async () => {
     vi.mocked(findUserById).mockResolvedValue(null);
+    await expect(getMe('user-1')).rejects.toThrow(AuthError);
+  });
+
+  it('throws when the user has been disabled', async () => {
+    vi.mocked(findUserById).mockResolvedValue({ ...baseUser, status: 'DISABLED', passwordHash: 'irrelevant' } as never);
     await expect(getMe('user-1')).rejects.toThrow(AuthError);
   });
 });

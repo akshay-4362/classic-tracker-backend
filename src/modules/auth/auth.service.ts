@@ -61,7 +61,7 @@ export async function refresh(
   }
 
   const user = await findUserById(payload.sub);
-  if (!user || !user.refreshTokenHash || !user.refreshTokenExpiresAt) {
+  if (!user || user.status !== 'ACTIVE' || !user.refreshTokenHash || !user.refreshTokenExpiresAt) {
     throw new AuthError('Invalid or expired refresh token');
   }
 
@@ -84,7 +84,7 @@ export async function logout(userId: string): Promise<void> {
 
 export async function getMe(userId: string): Promise<AuthUserView> {
   const user = await findUserById(userId);
-  if (!user) {
+  if (!user || user.status !== 'ACTIVE') {
     throw new AuthError('User not found');
   }
   return toUserView(user);
