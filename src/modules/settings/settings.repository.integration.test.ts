@@ -5,18 +5,26 @@ import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 // This suite exercises the repository's actual SQL-building logic against a
-// real Postgres database rather than a mock, since the partial-update logic
-// in updateTrackingSettingsRow (which fields get touched in the SET clause)
-// can only be verified by round-tripping through a real UPDATE ... RETURNING.
+// REAL, SHARED Neon Postgres database rather than a mock, since the
+// partial-update logic in updateTrackingSettingsRow (which fields get
+// touched in the SET clause) can only be verified by round-tripping through
+// a real UPDATE ... RETURNING.
+//
+// This file is named `*.integration.test.ts` and is excluded from the
+// default `npm test` run (see vitest.config.ts) specifically so it never
+// runs automatically. Run it deliberately with `npm run test:integration`,
+// which requires a `.env` with a real DATABASE_URL (the same connection the
+// migrator uses, and the one migration 0006 was applied against). Because it
+// mutates the shared `tracking_settings` singleton row, do not run it
+// concurrently with another instance of itself against the same database.
 //
 // vitest.config.ts stubs DATABASE_URL to a non-existent local URL for the
 // rest of the suite (every other test file mocks the repository/db layer
 // entirely, so it never actually connects). This file needs a reachable
-// database, so it overrides DATABASE_URL from the project's .env (the same
-// connection the migrator uses, and the one migration 0006 was applied
-// against) before importing the client module, then restores the stubbed
-// value afterwards so it doesn't leak into other test files that may share
-// this worker thread.
+// database, so it overrides DATABASE_URL from the project's .env before
+// importing the client module, then restores the stubbed value afterwards
+// so it doesn't leak into other test files that may share this worker
+// thread.
 const originalDatabaseUrl = process.env.DATABASE_URL;
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const parsedEnv = loadDotenv({ path: path.join(projectRoot, '.env') }).parsed;

@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration": "vitest run -c vitest.integration.config.ts",
     "db:migrate": "tsx src/database/migrator/run-migrations.ts",
     "db:migrate:rollback": "tsx src/database/migrator/rollback-migration.ts",
     "db:migrate:prod": "node dist/database/migrator/run-migrations.js",
