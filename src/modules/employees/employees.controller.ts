@@ -1,5 +1,9 @@
 import type { Request, Response } from 'express';
-import { createEmployeeSchema, updateEmployeeSchema } from './employees.dto.js';
+import {
+  createEmployeeSchema,
+  employeeIdParamSchema,
+  updateEmployeeSchema,
+} from './employees.dto.js';
 import {
   EmployeeEmailConflictError,
   EmployeeNotFoundError,
@@ -37,6 +41,11 @@ export async function getEmployeeHandler(
   req: Request<{ id: string }>,
   res: Response
 ): Promise<void> {
+  if (!employeeIdParamSchema.safeParse(req.params.id).success) {
+    res.status(404).json({ error: 'Employee not found' });
+    return;
+  }
+
   try {
     const employee = await getEmployee(req.params.id);
     res.status(200).json({ employee });
@@ -53,6 +62,11 @@ export async function updateEmployeeHandler(
   req: Request<{ id: string }>,
   res: Response
 ): Promise<void> {
+  if (!employeeIdParamSchema.safeParse(req.params.id).success) {
+    res.status(404).json({ error: 'Employee not found' });
+    return;
+  }
+
   const parsed = updateEmployeeSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: 'Invalid request body' });

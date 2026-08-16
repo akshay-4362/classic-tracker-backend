@@ -109,7 +109,7 @@ describe('employees routes', () => {
     it('returns employee detail', async () => {
       vi.mocked(getEmployee).mockResolvedValue(sampleDetail);
       const res = await request(createApp())
-        .get('/api/employees/emp-1')
+        .get('/api/employees/11111111-1111-4111-8111-111111111111')
         .set('Authorization', `Bearer ${adminToken}`);
       expect(res.status).toBe(200);
       expect(res.body.employee.id).toBe('emp-1');
@@ -119,9 +119,17 @@ describe('employees routes', () => {
     it('returns 404 when employee not found', async () => {
       vi.mocked(getEmployee).mockRejectedValue(new EmployeeNotFoundError('Employee not found'));
       const res = await request(createApp())
-        .get('/api/employees/emp-1')
+        .get('/api/employees/11111111-1111-4111-8111-111111111111')
         .set('Authorization', `Bearer ${adminToken}`);
       expect(res.status).toBe(404);
+    });
+
+    it('returns 404 for a malformed id instead of 500', async () => {
+      const res = await request(createApp())
+        .get('/api/employees/not-a-uuid')
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(res.status).toBe(404);
+      expect(getEmployee).not.toHaveBeenCalled();
     });
   });
 
@@ -129,7 +137,7 @@ describe('employees routes', () => {
     it('returns 200 with updated employee', async () => {
       vi.mocked(updateEmployee).mockResolvedValue({ ...sampleDetail, name: 'Robert' });
       const res = await request(createApp())
-        .put('/api/employees/emp-1')
+        .put('/api/employees/11111111-1111-4111-8111-111111111111')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ name: 'Robert' });
       expect(res.status).toBe(200);
@@ -138,7 +146,7 @@ describe('employees routes', () => {
 
     it('returns 400 for an empty body', async () => {
       const res = await request(createApp())
-        .put('/api/employees/emp-1')
+        .put('/api/employees/11111111-1111-4111-8111-111111111111')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({});
       expect(res.status).toBe(400);
@@ -148,7 +156,7 @@ describe('employees routes', () => {
     it('returns 404 when employee not found', async () => {
       vi.mocked(updateEmployee).mockRejectedValue(new EmployeeNotFoundError('Employee not found'));
       const res = await request(createApp())
-        .put('/api/employees/emp-1')
+        .put('/api/employees/11111111-1111-4111-8111-111111111111')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ name: 'Robert' });
       expect(res.status).toBe(404);
@@ -159,10 +167,19 @@ describe('employees routes', () => {
         new EmployeeEmailConflictError('Email already in use')
       );
       const res = await request(createApp())
-        .put('/api/employees/emp-1')
+        .put('/api/employees/11111111-1111-4111-8111-111111111111')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ email: 'other@example.com' });
       expect(res.status).toBe(409);
+    });
+
+    it('returns 404 for a malformed id instead of 500', async () => {
+      const res = await request(createApp())
+        .put('/api/employees/not-a-uuid')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: 'Robert' });
+      expect(res.status).toBe(404);
+      expect(updateEmployee).not.toHaveBeenCalled();
     });
   });
 });
