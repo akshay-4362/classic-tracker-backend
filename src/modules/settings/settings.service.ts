@@ -26,5 +26,8 @@ export async function updateTrackingSettings(data: {
   distanceIntervalM?: number;
 }): Promise<TrackingSettingsView> {
   const updated = await updateTrackingSettingsRow(data);
+  if (!updated) {
+    throw new Error('Tracking settings row is missing');
+  }
   return toView(updated);
 }
