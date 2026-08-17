@@ -5,7 +5,12 @@ vi.mock('./locations.repository.js', () => ({
   insertLocationBatch: vi.fn(),
 }));
 
+vi.mock('../websocket/socket.js', () => ({
+  broadcastLocationUpdate: vi.fn(),
+}));
+
 import { insertLocationBatch } from './locations.repository.js';
+import { broadcastLocationUpdate } from '../websocket/socket.js';
 import { ingestLocations } from './locations.service.js';
 import type { LocationPointInput } from './locations.dto.js';
 
@@ -54,5 +59,19 @@ describe('ingestLocations', () => {
 
     expect(result).toEqual({ inserted: 1 });
     expect(insertLocationBatch).toHaveBeenCalledWith('emp-1', [point], point);
+  });
+
+  it('broadcasts the latest point after a successful insert', async () => {
+    vi.mocked(insertLocationBatch).mockResolvedValue(undefined);
+    const point = makePoint({ latitude: 40.7128, longitude: -74.006 });
+
+    await ingestLocations('emp-1', [point]);
+
+    expect(broadcastLocationUpdate).toHaveBeenCalledWith({
+      employeeId: 'emp-1',
+      latitude: 40.7128,
+      longitude: -74.006,
+      updatedAt: expect.any(String),
+    });
   });
 });
