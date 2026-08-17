@@ -1,4 +1,4 @@
-import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 export const roleEnum = pgEnum('role', ['ADMIN', 'EMPLOYEE']);
 export const userStatusEnum = pgEnum('status', ['ACTIVE', 'DISABLED']);
@@ -11,6 +11,7 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash').notNull(),
   role: roleEnum('role').notNull().default('EMPLOYEE'),
   status: userStatusEnum('status').notNull().default('ACTIVE'),
+  locationVisibleToEmployees: boolean('location_visible_to_employees').notNull().default(false),
   refreshTokenHash: text('refresh_token_hash'),
   refreshTokenExpiresAt: timestamp('refresh_token_expires_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

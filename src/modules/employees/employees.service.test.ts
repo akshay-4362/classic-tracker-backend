@@ -33,6 +33,7 @@ const baseRow = {
   phone: null as string | null,
   role: 'EMPLOYEE' as const,
   status: 'ACTIVE' as const,
+  locationVisibleToEmployees: false,
   passwordHash: 'hash',
   refreshTokenHash: null as string | null,
   refreshTokenExpiresAt: null as Date | null,

@@ -11,6 +11,7 @@ describe('database schema', () => {
         'createdAt',
         'email',
         'id',
+        'locationVisibleToEmployees',
         'name',
         'passwordHash',
         'phone',
