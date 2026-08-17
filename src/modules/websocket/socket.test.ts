@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockUse = vi.fn();
 const mockOn = vi.fn();
-const mockTo = vi.fn();
 const mockEmit = vi.fn();
 
 vi.mock('socket.io', () => ({
@@ -10,7 +9,7 @@ vi.mock('socket.io', () => ({
     return {
       use: mockUse,
       on: mockOn,
-      to: mockTo,
+      emit: mockEmit,
     };
   }),
 }));
@@ -26,7 +25,6 @@ import { signAccessToken } from '../auth/jwt.js';
 describe('attachSocketServer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockTo.mockReturnValue({ emit: mockEmit });
   });
 
   it('creates the Socket.IO server with CORS config and registers the auth middleware', () => {
@@ -39,17 +37,6 @@ describe('attachSocketServer', () => {
       expect.objectContaining({ cors: expect.any(Object) })
     );
     expect(mockUse).toHaveBeenCalledWith(socketAuthMiddleware);
-    expect(mockOn).toHaveBeenCalledWith('connection', expect.any(Function));
-  });
-
-  it('joins a connecting socket to the admins room', () => {
-    attachSocketServer({} as never);
-    const connectionHandler = mockOn.mock.calls.find((call) => call[0] === 'connection')![1];
-    const join = vi.fn();
-
-    connectionHandler({ join });
-
-    expect(join).toHaveBeenCalledWith('admins');
   });
 });
 
@@ -62,13 +49,15 @@ describe('socketAuthMiddleware', () => {
     expect(next).toHaveBeenCalledWith(expect.any(Error));
   });
 
-  it('calls next with an error for a non-ADMIN token', () => {
+  it('calls next() with no error and sets socket.data.user for a valid EMPLOYEE token', () => {
     const token = signAccessToken({ sub: 'emp-1', role: 'EMPLOYEE' });
     const next = vi.fn();
+    const socket = { handshake: { auth: { token } }, data: {} as { user?: unknown } };
 
-    socketAuthMiddleware({ handshake: { auth: { token } }, data: {} } as never, next);
+    socketAuthMiddleware(socket as never, next);
 
-    expect(next).toHaveBeenCalledWith(expect.any(Error));
+    expect(next).toHaveBeenCalledWith();
+    expect(socket.data.user).toEqual({ id: 'emp-1', role: 'EMPLOYEE' });
   });
 
   it('calls next() with no error and sets socket.data.user for a valid ADMIN token', () => {
@@ -97,10 +86,9 @@ describe('socketAuthMiddleware', () => {
 describe('broadcastLocationUpdate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockTo.mockReturnValue({ emit: mockEmit });
   });
 
-  it('emits the point to the admins room after the server is attached', () => {
+  it('emits the point to every connected socket after the server is attached', () => {
     attachSocketServer({} as never);
     const point = {
       employeeId: 'emp-1',
@@ -111,7 +99,6 @@ describe('broadcastLocationUpdate', () => {
 
     broadcastLocationUpdate(point);
 
-    expect(mockTo).toHaveBeenCalledWith('admins');
     expect(mockEmit).toHaveBeenCalledWith('employee:location-update', point);
   });
 });

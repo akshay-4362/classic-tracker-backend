@@ -21,10 +21,6 @@ export function socketAuthMiddleware(socket: Socket, next: (err?: Error) => void
 
   try {
     const payload = verifyAccessToken(token);
-    if (payload.role !== 'ADMIN') {
-      next(new Error('Forbidden'));
-      return;
-    }
     socket.data.user = { id: payload.sub, role: payload.role };
     next();
   } catch {
@@ -39,14 +35,10 @@ export function attachSocketServer(httpServer: HttpServer): SocketIOServer {
 
   io.use(socketAuthMiddleware);
 
-  io.on('connection', (socket) => {
-    socket.join('admins');
-  });
-
   ioInstance = io;
   return io;
 }
 
 export function broadcastLocationUpdate(point: LocationUpdatePayload): void {
-  ioInstance?.to('admins').emit('employee:location-update', point);
+  ioInstance?.emit('employee:location-update', point);
 }
