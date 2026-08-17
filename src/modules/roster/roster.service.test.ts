@@ -10,16 +10,7 @@ import { listRoster } from './roster.service.js';
 const baseRow = {
   id: 'user-1',
   name: 'Bob',
-  email: 'bob@example.com',
-  phone: null as string | null,
-  passwordHash: 'hash',
   role: 'EMPLOYEE' as const,
-  status: 'ACTIVE' as const,
-  locationVisibleToEmployees: false,
-  refreshTokenHash: null as string | null,
-  refreshTokenExpiresAt: null as Date | null,
-  createdAt: new Date(),
-  updatedAt: new Date(),
 };
 
 describe('listRoster', () => {
