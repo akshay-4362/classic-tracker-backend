@@ -74,4 +74,20 @@ describe('ingestLocations', () => {
       updatedAt: expect.any(String),
     });
   });
+
+  it('still resolves with the insert count when the broadcast throws', async () => {
+    vi.mocked(insertLocationBatch).mockResolvedValue(undefined);
+    vi.mocked(broadcastLocationUpdate).mockImplementation(() => {
+      throw new Error('socket adapter error');
+    });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const points = [makePoint(), makePoint()];
+
+    const result = await ingestLocations('emp-1', points);
+
+    expect(result).toEqual({ inserted: 2 });
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
 });
