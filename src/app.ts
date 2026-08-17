@@ -34,7 +34,11 @@ export function createApp() {
       legacyHeaders: false,
     })
   );
-  app.use(express.json());
+  // Default body-parser limit (100KB) is too small for a full 500-point
+  // location batch with realistic full-precision GPS floats (~126KB), which
+  // would otherwise 413 forever for any device whose local queue fills up
+  // while offline. Give it real headroom above the locationBatchSchema cap.
+  app.use(express.json({ limit: '1mb' }));
 
   app.use('/api/auth', authRouter);
   app.use('/api/employees', employeesRouter);

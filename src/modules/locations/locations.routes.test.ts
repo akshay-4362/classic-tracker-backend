@@ -67,6 +67,33 @@ describe('POST /api/locations/batch', () => {
     expect(ingestLocations).not.toHaveBeenCalled();
   });
 
+  it('accepts a full-precision 500-point batch under the raised body size limit', async () => {
+    vi.mocked(ingestLocations).mockResolvedValue({ inserted: 500 });
+    // Mirrors realistic expo-location output: full-precision floats on every
+    // field, not the truncated fixtures used elsewhere in this file. This is
+    // what actually exercises payload size — a 500-point batch of these is
+    // ~126KB, comfortably inside the 1mb express.json() limit but well over
+    // the 100KB default, which is exactly the regression this test guards.
+    const fullPrecisionBatch = Array.from({ length: 500 }, (_, i) => ({
+      latitude: 40.71277612345678 + i * 0.00000123456789,
+      longitude: -74.00597423456789 - i * 0.00000123456789,
+      accuracy: 12.45678901234567,
+      altitude: 987.6543210987654,
+      speed: 3.210987654321098,
+      heading: 271.8459045235601,
+      batteryLevel: 0.8734567891234567,
+      recordedAt: new Date(Date.parse('2026-08-17T12:00:00.000Z') + i * 20_000).toISOString(),
+    }));
+
+    const res = await request(createApp())
+      .post('/api/locations/batch')
+      .set('Authorization', `Bearer ${employeeToken}`)
+      .send({ points: fullPrecisionBatch });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual({ inserted: 500 });
+  });
+
   it('derives employeeId from the token, not the request body', async () => {
     vi.mocked(ingestLocations).mockResolvedValue({ inserted: 1 });
     const otherToken = signAccessToken({ sub: 'emp-2', role: 'EMPLOYEE' });
