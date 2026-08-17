@@ -10,6 +10,6 @@ export async function ingestLocationsHandler(req: Request, res: Response): Promi
   }
 
   const employeeId = req.user!.id;
-  const result = await ingestLocations(employeeId, parsed.data.points);
+  const result = await ingestLocations(employeeId, req.user!.role, parsed.data.points);
   res.status(201).json(result);
 }

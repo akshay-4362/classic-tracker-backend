@@ -28,7 +28,7 @@ describe('POST /api/locations/batch', () => {
       .send({ points: [point] });
     expect(res.status).toBe(201);
     expect(res.body).toEqual({ inserted: 1 });
-    expect(ingestLocations).toHaveBeenCalledWith('emp-1', [point]);
+    expect(ingestLocations).toHaveBeenCalledWith('emp-1', 'EMPLOYEE', [point]);
   });
 
   it('returns 400 for an empty points array', async () => {
@@ -101,6 +101,6 @@ describe('POST /api/locations/batch', () => {
       .post('/api/locations/batch')
       .set('Authorization', `Bearer ${otherToken}`)
       .send({ points: [point] });
-    expect(ingestLocations).toHaveBeenCalledWith('emp-2', [point]);
+    expect(ingestLocations).toHaveBeenCalledWith('emp-2', 'EMPLOYEE', [point]);
   });
 });
