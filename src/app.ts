@@ -9,6 +9,7 @@ import { settingsRouter } from './modules/settings/settings.routes.js';
 import { locationsRouter } from './modules/locations/locations.routes.js';
 import { profileRouter } from './modules/profile/profile.routes.js';
 import { rosterRouter } from './modules/roster/roster.routes.js';
+import { historyRouter } from './modules/history/history.routes.js';
 
 export function createApp() {
   const app = express();
@@ -48,6 +49,7 @@ export function createApp() {
   app.use('/api/locations', locationsRouter);
   app.use('/api/profile', profileRouter);
   app.use('/api/roster', rosterRouter);
+  app.use('/api/history', historyRouter);
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     console.error(err);
