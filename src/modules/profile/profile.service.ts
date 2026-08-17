@@ -63,21 +63,28 @@ export async function updateMyProfile(
     newPassword?: string;
   }
 ): Promise<ProfileView> {
-  const existing = await findUserById(userId);
-  if (!existing) {
-    throw new ProfileNotFoundError('User not found');
-  }
-
-  const updateData: { name?: string; phone?: string | null; passwordHash?: string } = {};
+  const updateData: {
+    name?: string;
+    phone?: string | null;
+    passwordHash?: string;
+    refreshTokenHash?: null;
+    refreshTokenExpiresAt?: null;
+  } = {};
   if (data.name !== undefined) updateData.name = data.name;
   if ('phone' in data) updateData.phone = data.phone;
 
   if (data.newPassword) {
+    const existing = await findUserById(userId);
+    if (!existing) {
+      throw new ProfileNotFoundError('User not found');
+    }
     const isValid = await argon2.verify(existing.passwordHash, data.currentPassword ?? '');
     if (!isValid) {
       throw new ProfileCurrentPasswordError('Current password is incorrect');
     }
     updateData.passwordHash = await argon2.hash(data.newPassword);
+    updateData.refreshTokenHash = null;
+    updateData.refreshTokenExpiresAt = null;
   }
 
   const updated = await updateProfileFields(userId, updateData);

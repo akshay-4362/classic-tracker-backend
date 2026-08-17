@@ -105,27 +105,27 @@ describe('updateMyProfile', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('updates the name only', async () => {
-    vi.mocked(findUserById).mockResolvedValue(baseRow);
     vi.mocked(updateProfileFields).mockResolvedValue({ ...baseRow, name: 'Robert' });
 
     const result = await updateMyProfile('user-1', { name: 'Robert' });
 
     expect(result.name).toBe('Robert');
+    expect(findUserById).not.toHaveBeenCalled();
     const updateCall = vi.mocked(updateProfileFields).mock.calls[0][1];
     expect(updateCall).toEqual({ name: 'Robert' });
   });
 
   it('updates the phone only, including clearing it to null', async () => {
-    vi.mocked(findUserById).mockResolvedValue(baseRow);
     vi.mocked(updateProfileFields).mockResolvedValue({ ...baseRow, phone: null });
 
     await updateMyProfile('user-1', { phone: null });
 
+    expect(findUserById).not.toHaveBeenCalled();
     const updateCall = vi.mocked(updateProfileFields).mock.calls[0][1];
     expect(updateCall).toEqual({ phone: null });
   });
 
-  it('changes the password when currentPassword matches, hashing the new one', async () => {
+  it('changes the password when currentPassword matches, hashing the new one and clearing refresh tokens', async () => {
     const currentHash = await argon2.hash('oldpassword123');
     vi.mocked(findUserById).mockResolvedValue({ ...baseRow, passwordHash: currentHash });
     vi.mocked(updateProfileFields).mockResolvedValue(baseRow);
@@ -138,6 +138,8 @@ describe('updateMyProfile', () => {
     const updateCall = vi.mocked(updateProfileFields).mock.calls[0][1];
     expect(updateCall.passwordHash).toBeDefined();
     expect(await argon2.verify(updateCall.passwordHash!, 'newpassword456')).toBe(true);
+    expect(updateCall.refreshTokenHash).toBeNull();
+    expect(updateCall.refreshTokenExpiresAt).toBeNull();
   });
 
   it('throws ProfileCurrentPasswordError when currentPassword is wrong', async () => {
@@ -151,10 +153,19 @@ describe('updateMyProfile', () => {
   });
 
   it('throws ProfileNotFoundError when the user does not exist', async () => {
-    vi.mocked(findUserById).mockResolvedValue(null);
+    vi.mocked(updateProfileFields).mockResolvedValue(null);
 
     await expect(updateMyProfile('user-1', { name: 'Robert' })).rejects.toThrow(
       ProfileNotFoundError
     );
+  });
+
+  it('throws ProfileNotFoundError when the user does not exist for a password change', async () => {
+    vi.mocked(findUserById).mockResolvedValue(null);
+
+    await expect(
+      updateMyProfile('user-1', { currentPassword: 'oldpassword123', newPassword: 'newpassword456' })
+    ).rejects.toThrow(ProfileNotFoundError);
+    expect(updateProfileFields).not.toHaveBeenCalled();
   });
 });

@@ -46,6 +46,14 @@ describe('profile routes', () => {
       expect(res.body).toEqual({ locationVisibleToEmployees: true });
     });
 
+    it('returns visibility for employee', async () => {
+      vi.mocked(getLocationVisibility).mockResolvedValue({ locationVisibleToEmployees: false });
+      const res = await request(createApp())
+        .get('/api/profile/visibility')
+        .set('Authorization', `Bearer ${employeeToken}`);
+      expect(res.status).toBe(200);
+    });
+
     it('returns 401 without auth', async () => {
       const res = await request(createApp()).get('/api/profile/visibility');
       expect(res.status).toBe(401);
@@ -54,12 +62,39 @@ describe('profile routes', () => {
   });
 
   describe('PUT /api/profile/visibility', () => {
+    it('returns 200 for admin', async () => {
+      vi.mocked(updateLocationVisibility).mockResolvedValue({ locationVisibleToEmployees: true });
+      const res = await request(createApp())
+        .put('/api/profile/visibility')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ locationVisibleToEmployees: true });
+      expect(res.status).toBe(200);
+      expect(updateLocationVisibility).toHaveBeenCalledWith('admin-1', true);
+    });
+
     it('returns 403 for employee role', async () => {
       const res = await request(createApp())
         .put('/api/profile/visibility')
         .set('Authorization', `Bearer ${employeeToken}`)
         .send({ locationVisibleToEmployees: true });
       expect(res.status).toBe(403);
+      expect(updateLocationVisibility).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 for a non-boolean body', async () => {
+      const res = await request(createApp())
+        .put('/api/profile/visibility')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ locationVisibleToEmployees: 'yes' });
+      expect(res.status).toBe(400);
+      expect(updateLocationVisibility).not.toHaveBeenCalled();
+    });
+
+    it('returns 401 without auth', async () => {
+      const res = await request(createApp())
+        .put('/api/profile/visibility')
+        .send({ locationVisibleToEmployees: true });
+      expect(res.status).toBe(401);
       expect(updateLocationVisibility).not.toHaveBeenCalled();
     });
   });
@@ -101,7 +136,7 @@ describe('profile routes', () => {
       const res = await request(createApp())
         .put('/api/profile/me')
         .set('Authorization', `Bearer ${employeeToken}`)
-        .send({ name: 'Robert' });
+        .send({ name: 'Robert', role: 'ADMIN', email: 'evil@x.com' });
       expect(res.status).toBe(200);
       expect(res.body.name).toBe('Robert');
       expect(updateMyProfile).toHaveBeenCalledWith('emp-1', { name: 'Robert' });

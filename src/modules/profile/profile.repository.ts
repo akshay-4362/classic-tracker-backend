@@ -32,18 +32,28 @@ export async function findUserById(userId: string): Promise<UserRow | null> {
 
 export async function updateProfileFields(
   userId: string,
-  data: { name?: string; phone?: string | null; passwordHash?: string }
+  data: {
+    name?: string;
+    phone?: string | null;
+    passwordHash?: string;
+    refreshTokenHash?: null;
+    refreshTokenExpiresAt?: null;
+  }
 ): Promise<UserRow | null> {
   const setFields: {
     updatedAt: Date;
     name?: string;
     phone?: string | null;
     passwordHash?: string;
+    refreshTokenHash?: null;
+    refreshTokenExpiresAt?: null;
   } = { updatedAt: new Date() };
 
   if (data.name !== undefined) setFields.name = data.name;
   if ('phone' in data) setFields.phone = data.phone;
   if (data.passwordHash !== undefined) setFields.passwordHash = data.passwordHash;
+  if ('refreshTokenHash' in data) setFields.refreshTokenHash = data.refreshTokenHash;
+  if ('refreshTokenExpiresAt' in data) setFields.refreshTokenExpiresAt = data.refreshTokenExpiresAt;
 
   const [updated] = await db
     .update(users)
