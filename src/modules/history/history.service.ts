@@ -27,6 +27,9 @@ function thinPoints(points: HistoryPoint[]): HistoryPoint[] {
   const thinned = [points[0]];
   for (let i = 1; i < points.length; i++) {
     const last = thinned[thinned.length - 1];
+    if (points[i].recordedAt === last.recordedAt) {
+      continue; // never emit two points with identical recordedAt, even the final one
+    }
     const isLast = i === points.length - 1;
     const gapMs = new Date(points[i].recordedAt).getTime() - new Date(last.recordedAt).getTime();
     if (isLast || gapMs >= TEN_MINUTES_MS) {

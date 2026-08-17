@@ -73,4 +73,40 @@ describe('GET /api/history', () => {
     expect(res.status).toBe(400);
     expect(getLocationHistory).not.toHaveBeenCalled();
   });
+
+  it('returns 400 for a shape-valid but out-of-range date (month 13)', async () => {
+    const res = await request(createApp())
+      .get('/api/history')
+      .query({ employeeId: '11111111-1111-4111-8111-111111111111', date: '2026-13-01' })
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(400);
+    expect(getLocationHistory).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 for a shape-valid but out-of-range date (day 32)', async () => {
+    const res = await request(createApp())
+      .get('/api/history')
+      .query({ employeeId: '11111111-1111-4111-8111-111111111111', date: '2026-08-32' })
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(400);
+    expect(getLocationHistory).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 for an impossible-but-in-range date that JS would silently roll over (Feb 30)', async () => {
+    const res = await request(createApp())
+      .get('/api/history')
+      .query({ employeeId: '11111111-1111-4111-8111-111111111111', date: '2026-02-30' })
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(400);
+    expect(getLocationHistory).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 for another impossible-but-in-range date (Apr 31)', async () => {
+    const res = await request(createApp())
+      .get('/api/history')
+      .query({ employeeId: '11111111-1111-4111-8111-111111111111', date: '2026-04-31' })
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(400);
+    expect(getLocationHistory).not.toHaveBeenCalled();
+  });
 });

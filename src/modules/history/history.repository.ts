@@ -2,7 +2,13 @@ import { and, asc, eq, gte, lt } from 'drizzle-orm';
 import { db } from '../../database/client.js';
 import { locationHistory } from '../../database/schema/locationHistory.js';
 
-export type LocationHistoryRow = typeof locationHistory.$inferSelect;
+export interface LocationHistoryRow {
+  latitude: number;
+  longitude: number;
+  recordedAt: Date;
+  speed: number | null;
+  batteryLevel: number | null;
+}
 
 export async function findLocationHistoryForDay(
   employeeId: string,
@@ -10,7 +16,13 @@ export async function findLocationHistoryForDay(
   dayEnd: Date
 ): Promise<LocationHistoryRow[]> {
   return db
-    .select()
+    .select({
+      latitude: locationHistory.latitude,
+      longitude: locationHistory.longitude,
+      recordedAt: locationHistory.recordedAt,
+      speed: locationHistory.speed,
+      batteryLevel: locationHistory.batteryLevel,
+    })
     .from(locationHistory)
     .where(
       and(
