@@ -6,6 +6,7 @@ import { env } from './config/env.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { employeesRouter } from './modules/employees/employees.routes.js';
 import { settingsRouter } from './modules/settings/settings.routes.js';
+import { locationsRouter } from './modules/locations/locations.routes.js';
 
 export function createApp() {
   const app = express();
@@ -38,6 +39,7 @@ export function createApp() {
   app.use('/api/auth', authRouter);
   app.use('/api/employees', employeesRouter);
   app.use('/api/settings', settingsRouter);
+  app.use('/api/locations', locationsRouter);
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     console.error(err);
