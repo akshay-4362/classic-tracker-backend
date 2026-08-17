@@ -103,4 +103,14 @@ describe('POST /api/locations/batch', () => {
       .send({ points: [point] });
     expect(ingestLocations).toHaveBeenCalledWith('emp-2', 'EMPLOYEE', [point]);
   });
+
+  it('passes the ADMIN role through to ingestLocations', async () => {
+    vi.mocked(ingestLocations).mockResolvedValue({ inserted: 1 });
+    const adminToken = signAccessToken({ sub: 'admin-1', role: 'ADMIN' });
+    await request(createApp())
+      .post('/api/locations/batch')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ points: [point] });
+    expect(ingestLocations).toHaveBeenCalledWith('admin-1', 'ADMIN', [point]);
+  });
 });
