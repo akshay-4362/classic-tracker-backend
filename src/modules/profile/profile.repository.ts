@@ -2,6 +2,8 @@ import { eq } from 'drizzle-orm';
 import { db } from '../../database/client.js';
 import { users } from '../../database/schema/users.js';
 
+export type UserRow = typeof users.$inferSelect;
+
 export async function findUserVisibility(userId: string): Promise<boolean | null> {
   const [row] = await db
     .select({ locationVisibleToEmployees: users.locationVisibleToEmployees })
@@ -21,4 +23,32 @@ export async function updateUserVisibility(
     .where(eq(users.id, userId))
     .returning({ locationVisibleToEmployees: users.locationVisibleToEmployees });
   return updated ? updated.locationVisibleToEmployees : null;
+}
+
+export async function findUserById(userId: string): Promise<UserRow | null> {
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  return user ?? null;
+}
+
+export async function updateProfileFields(
+  userId: string,
+  data: { name?: string; phone?: string | null; passwordHash?: string }
+): Promise<UserRow | null> {
+  const setFields: {
+    updatedAt: Date;
+    name?: string;
+    phone?: string | null;
+    passwordHash?: string;
+  } = { updatedAt: new Date() };
+
+  if (data.name !== undefined) setFields.name = data.name;
+  if ('phone' in data) setFields.phone = data.phone;
+  if (data.passwordHash !== undefined) setFields.passwordHash = data.passwordHash;
+
+  const [updated] = await db
+    .update(users)
+    .set(setFields)
+    .where(eq(users.id, userId))
+    .returning();
+  return updated ?? null;
 }
