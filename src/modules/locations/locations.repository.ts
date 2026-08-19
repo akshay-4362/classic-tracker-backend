@@ -1,6 +1,46 @@
-import { sql } from 'drizzle-orm';
+import { gte, sql } from 'drizzle-orm';
 import { db } from '../../database/client.js';
+import { employeeLocations } from '../../database/schema/employeeLocations.js';
+import { users } from '../../database/schema/users.js';
 import type { LocationPointInput } from './locations.dto.js';
+
+export interface CurrentLocationRow {
+  employeeId: string;
+  latitude: number;
+  longitude: number;
+  updatedAt: Date;
+  role: 'ADMIN' | 'EMPLOYEE';
+  locationVisibleToEmployees: boolean;
+}
+
+// `last_seen_at` only ever moves forward (every ingest upserts it to `now()`)
+// and is never cleared back to null/false when someone stops sharing — see
+// locations.service.ts's ingestLocations for the write side. So "currently
+// sharing" can't be read off `is_tracking` (permanently true once anyone has
+// ever shared); recency of `last_seen_at` against `LIVE_LOCATION_TIMEOUT` is
+// the only real signal.
+export async function findCurrentLocations(
+  liveTimeoutSeconds: number
+): Promise<CurrentLocationRow[]> {
+  const cutoff = new Date(Date.now() - liveTimeoutSeconds * 1000);
+  const rows = await db
+    .select({
+      employeeId: employeeLocations.employeeId,
+      latitude: employeeLocations.latitude,
+      longitude: employeeLocations.longitude,
+      updatedAt: employeeLocations.lastSeenAt,
+      role: users.role,
+      locationVisibleToEmployees: users.locationVisibleToEmployees,
+    })
+    .from(employeeLocations)
+    .innerJoin(users, sql`${users.id} = ${employeeLocations.employeeId}`)
+    .where(gte(employeeLocations.lastSeenAt, cutoff));
+
+  return rows.map((row) => ({
+    ...row,
+    updatedAt: row.updatedAt ?? new Date(0),
+  }));
+}
 
 export async function insertLocationBatch(
   employeeId: string,

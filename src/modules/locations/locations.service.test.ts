@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./locations.repository.js', () => ({
   insertLocationBatch: vi.fn(),
+  findCurrentLocations: vi.fn(),
 }));
 
 vi.mock('../websocket/socket.js', () => ({
@@ -13,11 +14,12 @@ vi.mock('../profile/profile.repository.js', () => ({
   findUserVisibility: vi.fn(),
 }));
 
-import { insertLocationBatch } from './locations.repository.js';
+import { findCurrentLocations, insertLocationBatch } from './locations.repository.js';
 import { broadcastLocationUpdate } from '../websocket/socket.js';
 import { findUserVisibility } from '../profile/profile.repository.js';
-import { ingestLocations } from './locations.service.js';
+import { getCurrentLocations, ingestLocations } from './locations.service.js';
 import type { LocationPointInput } from './locations.dto.js';
+import type { CurrentLocationRow } from './locations.repository.js';
 
 function makePoint(overrides: Partial<LocationPointInput> = {}): LocationPointInput {
   return {
@@ -143,5 +145,71 @@ describe('ingestLocations', () => {
     expect(consoleErrorSpy).toHaveBeenCalled();
 
     consoleErrorSpy.mockRestore();
+  });
+});
+
+function makeRow(overrides: Partial<CurrentLocationRow> = {}): CurrentLocationRow {
+  return {
+    employeeId: 'emp-1',
+    latitude: 12.9,
+    longitude: 77.6,
+    updatedAt: new Date('2026-08-19T00:00:00.000Z'),
+    role: 'EMPLOYEE',
+    locationVisibleToEmployees: false,
+    ...overrides,
+  };
+}
+
+describe('getCurrentLocations', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns every row for an ADMIN caller, including other admins', async () => {
+    vi.mocked(findCurrentLocations).mockResolvedValue([
+      makeRow({ employeeId: 'emp-1', role: 'EMPLOYEE' }),
+      makeRow({ employeeId: 'admin-2', role: 'ADMIN', locationVisibleToEmployees: false }),
+    ]);
+
+    const result = await getCurrentLocations('admin-1', 'ADMIN');
+
+    expect(result.map((p) => p.employeeId)).toEqual(['emp-1', 'admin-2']);
+  });
+
+  it('for an EMPLOYEE caller, includes other employees and visible admins, excludes hidden admins', async () => {
+    vi.mocked(findCurrentLocations).mockResolvedValue([
+      makeRow({ employeeId: 'emp-2', role: 'EMPLOYEE' }),
+      makeRow({ employeeId: 'admin-1', role: 'ADMIN', locationVisibleToEmployees: true }),
+      makeRow({ employeeId: 'admin-2', role: 'ADMIN', locationVisibleToEmployees: false }),
+    ]);
+
+    const result = await getCurrentLocations('emp-1', 'EMPLOYEE');
+
+    expect(result.map((p) => p.employeeId)).toEqual(['emp-2', 'admin-1']);
+  });
+
+  it('always includes the caller their own row even if it would otherwise be filtered', async () => {
+    vi.mocked(findCurrentLocations).mockResolvedValue([
+      makeRow({ employeeId: 'admin-1', role: 'ADMIN', locationVisibleToEmployees: false }),
+    ]);
+
+    const result = await getCurrentLocations('admin-1', 'EMPLOYEE');
+
+    expect(result.map((p) => p.employeeId)).toEqual(['admin-1']);
+  });
+
+  it('maps rows to the API point shape with an ISO updatedAt', async () => {
+    vi.mocked(findCurrentLocations).mockResolvedValue([
+      makeRow({ employeeId: 'emp-1', latitude: 12.9, longitude: 77.6 }),
+    ]);
+
+    const result = await getCurrentLocations('emp-1', 'EMPLOYEE');
+
+    expect(result).toEqual([
+      {
+        employeeId: 'emp-1',
+        latitude: 12.9,
+        longitude: 77.6,
+        updatedAt: '2026-08-19T00:00:00.000Z',
+      },
+    ]);
   });
 });

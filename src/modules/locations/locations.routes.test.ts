@@ -3,10 +3,11 @@ import request from 'supertest';
 
 vi.mock('./locations.service.js', () => ({
   ingestLocations: vi.fn(),
+  getCurrentLocations: vi.fn(),
 }));
 
 import { createApp } from '../../app.js';
-import { ingestLocations } from './locations.service.js';
+import { getCurrentLocations, ingestLocations } from './locations.service.js';
 import { signAccessToken } from '../auth/jwt.js';
 
 const employeeToken = signAccessToken({ sub: 'emp-1', role: 'EMPLOYEE' });
@@ -112,5 +113,33 @@ describe('POST /api/locations/batch', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ points: [point] });
     expect(ingestLocations).toHaveBeenCalledWith('admin-1', 'ADMIN', [point]);
+  });
+});
+
+describe('GET /api/locations/current', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns 200 with the current points for the caller', async () => {
+    vi.mocked(getCurrentLocations).mockResolvedValue([
+      { employeeId: 'emp-1', latitude: 12.9, longitude: 77.6, updatedAt: '2026-08-19T00:00:00.000Z' },
+    ]);
+
+    const res = await request(createApp())
+      .get('/api/locations/current')
+      .set('Authorization', `Bearer ${employeeToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      points: [
+        { employeeId: 'emp-1', latitude: 12.9, longitude: 77.6, updatedAt: '2026-08-19T00:00:00.000Z' },
+      ],
+    });
+    expect(getCurrentLocations).toHaveBeenCalledWith('emp-1', 'EMPLOYEE');
+  });
+
+  it('returns 401 without auth', async () => {
+    const res = await request(createApp()).get('/api/locations/current');
+    expect(res.status).toBe(401);
+    expect(getCurrentLocations).not.toHaveBeenCalled();
   });
 });

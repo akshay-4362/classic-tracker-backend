@@ -1,11 +1,41 @@
-import { insertLocationBatch } from './locations.repository.js';
+import { findCurrentLocations, insertLocationBatch } from './locations.repository.js';
 import { broadcastLocationUpdate } from '../websocket/socket.js';
 import { findUserVisibility } from '../profile/profile.repository.js';
+import { env } from '../../config/env.js';
 import type { LocationPointInput } from './locations.dto.js';
 import type { Role } from '../../common/types.js';
 
 export interface IngestLocationsResult {
   inserted: number;
+}
+
+export interface CurrentLocationPoint {
+  employeeId: string;
+  latitude: number;
+  longitude: number;
+  updatedAt: string;
+}
+
+export async function getCurrentLocations(
+  callerId: string,
+  callerRole: Role
+): Promise<CurrentLocationPoint[]> {
+  const rows = await findCurrentLocations(env.LIVE_LOCATION_TIMEOUT);
+
+  return rows
+    .filter(
+      (row) =>
+        callerRole === 'ADMIN' ||
+        row.employeeId === callerId ||
+        row.role === 'EMPLOYEE' ||
+        row.locationVisibleToEmployees
+    )
+    .map((row) => ({
+      employeeId: row.employeeId,
+      latitude: row.latitude,
+      longitude: row.longitude,
+      updatedAt: row.updatedAt.toISOString(),
+    }));
 }
 
 function selectLatestPoint(points: LocationPointInput[]): LocationPointInput {
