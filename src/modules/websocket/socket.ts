@@ -35,10 +35,16 @@ export function attachSocketServer(httpServer: HttpServer): SocketIOServer {
 
   io.use(socketAuthMiddleware);
 
+  io.on('connection', (socket) => {
+    const user = socket.data.user as { id: string; role: string };
+    socket.join(`user:${user.id}`);
+    socket.join(`role:${user.role}`);
+  });
+
   ioInstance = io;
   return io;
 }
 
-export function broadcastLocationUpdate(point: LocationUpdatePayload): void {
-  ioInstance?.emit('employee:location-update', point);
+export function broadcastLocationUpdate(point: LocationUpdatePayload, rooms: string[]): void {
+  ioInstance?.to(rooms).emit('employee:location-update', point);
 }

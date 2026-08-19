@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockUse = vi.fn();
 const mockOn = vi.fn();
 const mockEmit = vi.fn();
+const mockTo = vi.fn(() => ({ emit: mockEmit }));
 
 vi.mock('socket.io', () => ({
   Server: vi.fn().mockImplementation(function () {
@@ -10,6 +11,7 @@ vi.mock('socket.io', () => ({
       use: mockUse,
       on: mockOn,
       emit: mockEmit,
+      to: mockTo,
     };
   }),
 }));
@@ -37,6 +39,17 @@ describe('attachSocketServer', () => {
       expect.objectContaining({ cors: expect.any(Object) })
     );
     expect(mockUse).toHaveBeenCalledWith(socketAuthMiddleware);
+  });
+
+  it('joins each connecting socket to its user and role rooms', () => {
+    attachSocketServer({} as never);
+
+    const connectionHandler = mockOn.mock.calls.find(([event]) => event === 'connection')?.[1];
+    const mockJoin = vi.fn();
+    connectionHandler({ data: { user: { id: 'emp-1', role: 'EMPLOYEE' } }, join: mockJoin });
+
+    expect(mockJoin).toHaveBeenCalledWith('user:emp-1');
+    expect(mockJoin).toHaveBeenCalledWith('role:EMPLOYEE');
   });
 });
 
@@ -88,7 +101,7 @@ describe('broadcastLocationUpdate', () => {
     vi.clearAllMocks();
   });
 
-  it('emits the point to every connected socket after the server is attached', () => {
+  it('emits the point to only the given rooms after the server is attached', () => {
     attachSocketServer({} as never);
     const point = {
       employeeId: 'emp-1',
@@ -97,8 +110,9 @@ describe('broadcastLocationUpdate', () => {
       updatedAt: '2026-08-17T12:00:00.000Z',
     };
 
-    broadcastLocationUpdate(point);
+    broadcastLocationUpdate(point, ['user:emp-1', 'role:ADMIN']);
 
+    expect(mockTo).toHaveBeenCalledWith(['user:emp-1', 'role:ADMIN']);
     expect(mockEmit).toHaveBeenCalledWith('employee:location-update', point);
   });
 });

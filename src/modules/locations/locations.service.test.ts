@@ -66,22 +66,25 @@ describe('ingestLocations', () => {
     expect(insertLocationBatch).toHaveBeenCalledWith('emp-1', [point], point);
   });
 
-  it('always broadcasts for an EMPLOYEE role', async () => {
+  it('broadcasts an EMPLOYEE update to their own room, admins, and employees', async () => {
     vi.mocked(insertLocationBatch).mockResolvedValue(undefined);
     const point = makePoint({ latitude: 40.7128, longitude: -74.006 });
 
     await ingestLocations('emp-1', 'EMPLOYEE', [point]);
 
-    expect(broadcastLocationUpdate).toHaveBeenCalledWith({
-      employeeId: 'emp-1',
-      latitude: 40.7128,
-      longitude: -74.006,
-      updatedAt: expect.any(String),
-    });
+    expect(broadcastLocationUpdate).toHaveBeenCalledWith(
+      {
+        employeeId: 'emp-1',
+        latitude: 40.7128,
+        longitude: -74.006,
+        updatedAt: expect.any(String),
+      },
+      expect.arrayContaining(['user:emp-1', 'role:ADMIN', 'role:EMPLOYEE'])
+    );
     expect(findUserVisibility).not.toHaveBeenCalled();
   });
 
-  it('broadcasts for an ADMIN role when their visibility flag is true', async () => {
+  it('broadcasts an ADMIN update to their own room and all admins, plus employees when visible', async () => {
     vi.mocked(insertLocationBatch).mockResolvedValue(undefined);
     vi.mocked(findUserVisibility).mockResolvedValue(true);
     const point = makePoint({ latitude: 40.7128, longitude: -74.006 });
@@ -89,15 +92,18 @@ describe('ingestLocations', () => {
     await ingestLocations('admin-1', 'ADMIN', [point]);
 
     expect(findUserVisibility).toHaveBeenCalledWith('admin-1');
-    expect(broadcastLocationUpdate).toHaveBeenCalledWith({
-      employeeId: 'admin-1',
-      latitude: 40.7128,
-      longitude: -74.006,
-      updatedAt: expect.any(String),
-    });
+    expect(broadcastLocationUpdate).toHaveBeenCalledWith(
+      {
+        employeeId: 'admin-1',
+        latitude: 40.7128,
+        longitude: -74.006,
+        updatedAt: expect.any(String),
+      },
+      expect.arrayContaining(['user:admin-1', 'role:ADMIN', 'role:EMPLOYEE'])
+    );
   });
 
-  it('does not broadcast for an ADMIN role when their visibility flag is false', async () => {
+  it('still broadcasts an ADMIN update to their own room and all admins, but not employees, when their visibility flag is false', async () => {
     vi.mocked(insertLocationBatch).mockResolvedValue(undefined);
     vi.mocked(findUserVisibility).mockResolvedValue(false);
     const point = makePoint();
@@ -105,10 +111,12 @@ describe('ingestLocations', () => {
     const result = await ingestLocations('admin-1', 'ADMIN', [point]);
 
     expect(result).toEqual({ inserted: 1 });
-    expect(broadcastLocationUpdate).not.toHaveBeenCalled();
+    const [, rooms] = vi.mocked(broadcastLocationUpdate).mock.calls[0]!;
+    expect(rooms).toEqual(expect.arrayContaining(['user:admin-1', 'role:ADMIN']));
+    expect(rooms).not.toContain('role:EMPLOYEE');
   });
 
-  it('does not broadcast for an ADMIN role when their visibility flag lookup returns null', async () => {
+  it('still broadcasts an ADMIN update to their own room and all admins, but not employees, when their visibility flag lookup returns null', async () => {
     vi.mocked(insertLocationBatch).mockResolvedValue(undefined);
     vi.mocked(findUserVisibility).mockResolvedValue(null);
     const point = makePoint();
@@ -116,7 +124,9 @@ describe('ingestLocations', () => {
     const result = await ingestLocations('admin-1', 'ADMIN', [point]);
 
     expect(result).toEqual({ inserted: 1 });
-    expect(broadcastLocationUpdate).not.toHaveBeenCalled();
+    const [, rooms] = vi.mocked(broadcastLocationUpdate).mock.calls[0]!;
+    expect(rooms).toEqual(expect.arrayContaining(['user:admin-1', 'role:ADMIN']));
+    expect(rooms).not.toContain('role:EMPLOYEE');
   });
 
   it('still resolves with the insert count when the broadcast throws', async () => {
